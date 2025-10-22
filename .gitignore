@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Sensitive files
+.pat-classic.txt
+*.pat
+*.token
+*.secret
+.env
+*.env
+config/
+.qwen/settings.json
