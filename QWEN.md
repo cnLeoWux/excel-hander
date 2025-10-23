@@ -1,3 +1,11 @@
+<!--
+ * @Author: Leo Wu leo.wux@lego.com
+ * @Date: 2025-10-21 17:30:25
+ * @LastEditors: Leo Wu leo.wux@lego.com
+ * @LastEditTime: 2025-10-23 12:02:35
+ * @FilePath: /excel-hander/QWEN.md
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 # Excel Handler Project
 
 ## Project Overview
@@ -33,24 +41,29 @@ This is a Python-based Excel file handling and merging tool that allows users to
 ## Dependencies
 
 The project uses the following Python libraries:
+
 - pandas: For data manipulation and Excel file handling
 - openpyxl (likely as a dependency of pandas for Excel support)
 
 ## Building and Running
 
 ### Prerequisites
+
 - Python 3.x
 - Install pandas: `pip install pandas openpyxl`
 
 ### Running the Application
 
 1. **Interactive Mode**:
+
    ```bash
    python excel_merger.py
    ```
+
    This will prompt you for two Excel file paths, output path, merge type, and column to merge on.
 
 2. **Testing with Sample Data**:
+
    ```bash
    # Create sample files
    python create_sample1.py
@@ -61,6 +74,7 @@ The project uses the following Python libraries:
    ```
 
 3. **Using the Merger in Code**:
+
    ```python
    from excel_merger import ExcelMerger
    
@@ -88,6 +102,7 @@ The project uses the following Python libraries:
 ## Use Cases
 
 This project is useful for:
+
 - Merging datasets from different Excel files based on common identifiers
 - Combining reports or data from separate sources
 - Data integration tasks requiring different types of joins
