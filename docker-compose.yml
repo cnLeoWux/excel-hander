@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  excel-merger:
+    build: .
+    container_name: excel-merger
+    volumes:
+      - ./input:/app/input  # Mount input directory
+      - ./output:/app/output  # Mount output directory
+    # If running as command-line tool, override command:
+    command: ["python", "excel_merger.py", "input/file1.xlsx", "input/file2.xlsx", "-o", "output/merged.xlsx", "-m", "inner"]
