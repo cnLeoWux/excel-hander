@@ -685,6 +685,133 @@ class ExcelMerger:
         filtered_df.rename(columns=new_columns, inplace=True)
         
         return filtered_df
+
+    def custom_business_logic_merge(self, file1_path: str, file2_path: str, output_path: str,
+                                   order_col: str = '订单号', business_order_col: str = '商务订单号',
+                                   external_order_col: str = '外部订单号', product_name_col: str = '商品名称',
+                                   amount_col: str = '订单金额') -> str:
+        """
+        Custom merge using specific business logic:
+        - First table '订单号' column matches second table '商务订单号' column on first 20 characters 
+          (if both have at least 20 characters)
+        - First table '外部订单号' column matches second table '商品名称' column on P followed by digits
+        - Records with positive '订单金额' are treated as normal orders
+        - Records with negative '订单金额' are treated as return orders
+        
+        Args:
+            file1_path (str): Path to first Excel file
+            file2_path (str): Path to second Excel file
+            output_path (str): Path to save the merged Excel file
+            order_col (str): Column name in first file for order numbers (default '订单号')
+            business_order_col (str): Column name in second file for business order numbers (default '商务订单号')
+            external_order_col (str): Column name in first file for external order numbers (default '外部订单号')
+            product_name_col (str): Column name in second file for product names (default '商品名称')
+            amount_col (str): Column name in first file for order amounts (default '订单金额')
+            
+        Returns:
+            str: Path to the merged Excel file
+        """
+        self.logger.info(f"开始执行自定义业务逻辑合并操作，输出路径: {output_path}")
+        
+        # Validate parameters
+        self.validate_merge_parameters(output_path, 'inner')
+        self.validate_file_path(file1_path)
+        self.validate_file_path(file2_path)
+        
+        # Load the files
+        df1 = pd.read_excel(file1_path)
+        df2 = pd.read_excel(file2_path)
+        
+        if df1.empty or df2.empty:
+            raise ValueError("一个或两个Excel文件为空。")
+        
+        if not os.access(file1_path, os.R_OK):
+            raise PermissionError(f"第一个文件不可读: {file1_path}")
+        if not os.access(file2_path, os.R_OK):
+            raise PermissionError(f"第二个文件不可读: {file2_path}")
+        
+        # Validate required columns exist
+        required_cols_df1 = [order_col, external_order_col, amount_col]
+        required_cols_df2 = [business_order_col, product_name_col]
+        
+        for col in required_cols_df1:
+            if col not in df1.columns:
+                raise ValueError(f"第一张表中找不到列 '{col}'")
+        for col in required_cols_df2:
+            if col not in df2.columns:
+                raise ValueError(f"第二张表中找不到列 '{col}'")
+        
+        # Create temporary columns for the matching logic
+        df1_temp = df1.copy()
+        df2_temp = df2.copy()
+        
+        # 1. Match '订单号' with '商务订单号' based on first 20 characters
+        # Create a column with first 20 characters of order number
+        df1_temp['order_prefix'] = df1_temp[order_col].astype(str).apply(
+            lambda x: x[:20] if len(str(x)) >= 20 else None
+        )
+        df2_temp['business_order_prefix'] = df2_temp[business_order_col].astype(str).apply(
+            lambda x: x[:20] if len(str(x)) >= 20 else None
+        )
+        
+        # 2. Match '外部订单号' with '商品名称' based on P followed by digits
+        import re
+        # Extract P followed by digits from external order numbers in df1
+        df1_temp['p_code'] = df1_temp[external_order_col].astype(str).apply(
+            lambda x: re.search(r'P\d+', str(x)).group() if re.search(r'P\d+', str(x)) else None
+        )
+        # Extract P followed by digits from product names in df2
+        df2_temp['p_code'] = df2_temp[product_name_col].astype(str).apply(
+            lambda x: re.search(r'P\d+', str(x)).group() if re.search(r'P\d+', str(x)) else None
+        )
+        
+        # Perform the merge using both conditions
+        # First, match on order number prefix
+        prefix_match = pd.merge(
+            df1_temp[df1_temp['order_prefix'].notna()],
+            df2_temp[df2_temp['business_order_prefix'].notna()],
+            left_on='order_prefix',
+            right_on='business_order_prefix',
+            how='inner',
+            suffixes=('_df1', '_df2')
+        )
+        
+        # Then, match on P codes
+        p_match = pd.merge(
+            df1_temp[df1_temp['p_code'].notna()],
+            df2_temp[df2_temp['p_code'].notna()],
+            left_on='p_code',
+            right_on='p_code',
+            how='inner',
+            suffixes=('_df1', '_df2')
+        )
+        
+        # Combine both results
+        merged_df = pd.concat([prefix_match, p_match], ignore_index=True, sort=False)
+        
+        # Remove temporary columns
+        temp_cols_to_drop = ['order_prefix', 'business_order_prefix', 'p_code']
+        for col in temp_cols_to_drop:
+            if col in merged_df.columns:
+                merged_df.drop(columns=[col], inplace=True)
+        
+        # Identify positive and negative orders (正单 and 退单)
+        if amount_col in [col for col in df1.columns]:
+            # Add column to identify order types
+            merged_df['订单类型'] = merged_df[amount_col + '_df1'].apply(
+                lambda x: '正单' if pd.notna(x) and float(x) > 0 else ('退单' if pd.notna(x) and float(x) < 0 else '未知')
+            )
+        else:
+            # If amount column doesn't exist, mark them as unknown
+            merged_df['订单类型'] = '未知'
+        
+        self.logger.info(f"合并的数据框形状: {merged_df.shape}")
+        
+        # Save to Excel file
+        merged_df.to_excel(output_path, index=False)
+        self.logger.info(f"已将合并的Excel文件保存到: {output_path}")
+        
+        return output_path
     
     def merge_files(self, output_path: str, merge_type: str = 'inner', 
                    matching_column: Optional[str] = None) -> str:
