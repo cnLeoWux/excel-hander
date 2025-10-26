@@ -1232,7 +1232,7 @@ def main() -> None:
     # Define arguments
     parser.add_argument('file1', nargs='?', help='Path to the first Excel file')
     parser.add_argument('file2', nargs='?', help='Path to the second Excel file')
-    parser.add_argument('-o', '--output', required=True, help='Path to save the merged Excel file')
+    parser.add_argument('-o', '--output', help='Path to save the merged Excel file')
     parser.add_argument('-m', '--merge-type', choices=['inner', 'outer', 'left', 'right'], 
                         default='inner', help='Type of merge (default: inner)')
     parser.add_argument('-c', '--column', help='Specific column to merge on (default: first matching column)')
@@ -1240,6 +1240,7 @@ def main() -> None:
     parser.add_argument('--config', help='Path to configuration file (JSON or YAML)')
     parser.add_argument('--multiple', nargs='+', help='Multiple files to merge (alternative to file1 and file2)')
     parser.add_argument('--formatting', help='JSON string with formatting options')
+    parser.add_argument('--interactive', action='store_true', help='Run in interactive mode to specify files via prompts')
     
     args = parser.parse_args()
     
@@ -1254,10 +1255,65 @@ def main() -> None:
             print(f"Error using configuration: {e}")
             return
     
-    # Validate required arguments
+    # Handle interactive mode
+    if args.interactive:
+        print("Excel Files Merger - Interactive Mode")
+        print("="*40)
+        
+        # Get file paths from user
+        file1_path = input("Enter the path of the first Excel file: ").strip()
+        file2_path = input("Enter the path of the second Excel file: ").strip()
+        
+        # Get output path
+        output_path = input("Enter the path to save the merged Excel file: ").strip()
+        
+        # Create ExcelMerger instance with logging
+        log_level = "DEBUG" if args.verbose else "INFO"
+        merger = ExcelMerger(log_level=log_level, log_file="excel_merger.log")
+        
+        # Load the Excel files (validation happens inside load_excel_files)
+        merger.load_excel_files(file1_path, file2_path)
+        
+        # Show matching columns
+        matching_columns = merger.find_matching_columns()
+        if matching_columns:
+            print(f"\nMatching columns found: {matching_columns}")
+        else:
+            print("No matching columns found between the two Excel files.")
+            return
+        
+        # Get merge type
+        print("\nSelect merge type:")
+        print("1. Inner (default) - Only rows with matching values in both files")
+        print("2. Outer - All rows from both files")
+        print("3. Left - All rows from first file")
+        print("4. Right - All rows from second file")
+        
+        merge_choice = input("Enter your choice (1-4, default is 1): ").strip()
+        merge_type_map = {'1': 'inner', '2': 'outer', '3': 'left', '4': 'right'}
+        merge_type = merge_type_map.get(merge_choice, 'inner')
+        
+        # Get specific column to merge on (optional)
+        specific_column = input(f"\nEnter specific column name to merge on (or press Enter to use first matching column '{matching_columns[0]}'): ").strip()
+        if specific_column == "":
+            specific_column = None
+            
+        # Perform the merge
+        result_path = merger.merge_files(output_path, merge_type, specific_column)
+        
+        print(f"\nSuccessfully merged the Excel files! Output: {result_path}")
+        return
+    
+    # For non-interactive mode, check if we have required arguments
+    if not args.output:
+        print("Error: Output path is required. Use -o/--output to specify output file.")
+        parser.print_help()
+        return
+        
     if not args.multiple and (not args.file1 or not args.file2):
         parser.print_help()
         print("\nError: Either specify both input files (file1 and file2) or use --multiple option.")
+        print("Or use --interactive flag to run in interactive mode.")
         return
     
     try:
