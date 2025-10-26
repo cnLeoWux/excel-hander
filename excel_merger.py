@@ -1223,151 +1223,151 @@ class ExcelMerger:
 
 def main() -> None:
     """
-    Main function to run the Excel merger application.
+    主函数，运行Excel合并应用程序。
     """
     import argparse
     
-    parser = argparse.ArgumentParser(description='Merge Excel files based on matching columns.')
+    parser = argparse.ArgumentParser(description='基于匹配列合并Excel文件。')
     
-    # Define arguments
-    parser.add_argument('file1', nargs='?', help='Path to the first Excel file')
-    parser.add_argument('file2', nargs='?', help='Path to the second Excel file')
-    parser.add_argument('-o', '--output', help='Path to save the merged Excel file')
+    # 定义参数
+    parser.add_argument('file1', nargs='?', help='第一个Excel文件的路径')
+    parser.add_argument('file2', nargs='?', help='第二个Excel文件的路径')
+    parser.add_argument('-o', '--output', help='保存合并后Excel文件的路径')
     parser.add_argument('-m', '--merge-type', choices=['inner', 'outer', 'left', 'right'], 
-                        default='inner', help='Type of merge (default: inner)')
-    parser.add_argument('-c', '--column', help='Specific column to merge on (default: first matching column)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--config', help='Path to configuration file (JSON or YAML)')
-    parser.add_argument('--multiple', nargs='+', help='Multiple files to merge (alternative to file1 and file2)')
-    parser.add_argument('--formatting', help='JSON string with formatting options')
-    parser.add_argument('--interactive', action='store_true', help='Run in interactive mode to specify files via prompts')
+                        default='inner', help='合并类型（默认：inner）')
+    parser.add_argument('-c', '--column', help='用于合并的特定列（默认：第一个匹配的列）')
+    parser.add_argument('-v', '--verbose', action='store_true', help='启用详细日志')
+    parser.add_argument('--config', help='配置文件路径（JSON或YAML）')
+    parser.add_argument('--multiple', nargs='+', help='要合并的多个文件（作为file1和file2的替代方案）')
+    parser.add_argument('--formatting', help='包含格式选项的JSON字符串')
+    parser.add_argument('--interactive', action='store_true', help='以交互模式运行，通过提示指定文件')
     
     args = parser.parse_args()
     
-    # Handle configuration file
+    # 处理配置文件
     if args.config:
         try:
             merger = ExcelMerger(log_level="DEBUG" if args.verbose else "INFO", log_file="excel_merger.log")
             result_path = merger.merge_with_config(args.config)
-            print(f"Successfully merged Excel files using configuration. Output: {result_path}")
+            print(f"使用配置成功合并Excel文件。输出: {result_path}")
             return
         except Exception as e:
-            print(f"Error using configuration: {e}")
+            print(f"使用配置时出错: {e}")
             return
     
-    # Handle interactive mode
+    # 处理交互模式
     if args.interactive:
-        print("Excel Files Merger - Interactive Mode")
+        print("Excel文件合并工具 - 交互模式")
         print("="*40)
         
-        # Get file paths from user
-        file1_path = input("Enter the path of the first Excel file: ").strip()
-        file2_path = input("Enter the path of the second Excel file: ").strip()
+        # 从用户获取文件路径
+        file1_path = input("输入第一个Excel文件的路径: ").strip()
+        file2_path = input("输入第二个Excel文件的路径: ").strip()
         
-        # Get output path
-        output_path = input("Enter the path to save the merged Excel file: ").strip()
+        # 获取输出路径
+        output_path = input("输入保存合并后Excel文件的路径: ").strip()
         
-        # Create ExcelMerger instance with logging
+        # 创建ExcelMerger实例并启用日志
         log_level = "DEBUG" if args.verbose else "INFO"
         merger = ExcelMerger(log_level=log_level, log_file="excel_merger.log")
         
-        # Load the Excel files (validation happens inside load_excel_files)
+        # 加载Excel文件（验证在load_excel_files内部进行）
         merger.load_excel_files(file1_path, file2_path)
         
-        # Show matching columns
+        # 显示匹配的列
         matching_columns = merger.find_matching_columns()
         if matching_columns:
-            print(f"\nMatching columns found: {matching_columns}")
+            print(f"\n找到匹配的列: {matching_columns}")
         else:
-            print("No matching columns found between the two Excel files.")
+            print("两个Excel文件之间没有找到匹配的列。")
             return
         
-        # Get merge type
-        print("\nSelect merge type:")
-        print("1. Inner (default) - Only rows with matching values in both files")
-        print("2. Outer - All rows from both files")
-        print("3. Left - All rows from first file")
-        print("4. Right - All rows from second file")
+        # 获取合并类型
+        print("\n选择合并类型:")
+        print("1. Inner（默认） - 仅保留两个文件中都有匹配值的行")
+        print("2. Outer - 两个文件的所有行")
+        print("3. Left - 第一个文件的所有行")
+        print("4. Right - 第二个文件的所有行")
         
-        merge_choice = input("Enter your choice (1-4, default is 1): ").strip()
+        merge_choice = input("输入您的选择（1-4，默认为1）: ").strip()
         merge_type_map = {'1': 'inner', '2': 'outer', '3': 'left', '4': 'right'}
         merge_type = merge_type_map.get(merge_choice, 'inner')
         
-        # Get specific column to merge on (optional)
-        specific_column = input(f"\nEnter specific column name to merge on (or press Enter to use first matching column '{matching_columns[0]}'): ").strip()
+        # 获取用于合并的特定列（可选）
+        specific_column = input(f"\n输入要合并的特定列名（或按回车使用第一个匹配列 '{matching_columns[0]}'）: ").strip()
         if specific_column == "":
             specific_column = None
             
-        # Perform the merge
+        # 执行合并
         result_path = merger.merge_files(output_path, merge_type, specific_column)
         
-        print(f"\nSuccessfully merged the Excel files! Output: {result_path}")
+        print(f"\nExcel文件合并成功！输出: {result_path}")
         return
     
-    # For non-interactive mode, check if we have required arguments
+    # 对于非交互模式，检查是否需要参数
     if not args.output:
-        print("Error: Output path is required. Use -o/--output to specify output file.")
+        print("错误：需要输出路径。使用 -o/--output 指定输出文件。")
         parser.print_help()
         return
         
     if not args.multiple and (not args.file1 or not args.file2):
         parser.print_help()
-        print("\nError: Either specify both input files (file1 and file2) or use --multiple option.")
-        print("Or use --interactive flag to run in interactive mode.")
+        print("\n错误：指定两个输入文件（file1和file2）或使用 --multiple 选项。")
+        print("或使用 --interactive 标志以交互模式运行。")
         return
     
     try:
-        # Create ExcelMerger instance with logging
+        # 创建ExcelMerger实例并启用日志
         log_level = "DEBUG" if args.verbose else "INFO"
         merger = ExcelMerger(log_level=log_level, log_file="excel_merger.log")
         
         if args.multiple:
-            # Handle multiple file merging
-            print(f"Merging {len(args.multiple)} Excel files...")
+            # 处理多个文件合并
+            print(f"正在合并 {len(args.multiple)} 个Excel文件...")
             
-            # Load multiple files
+            # 加载多个文件
             merger.load_multiple_excel_files(args.multiple)
             
-            # Find common columns
+            # 查找公共列
             common_columns = merger.find_common_columns()
             if common_columns:
-                print(f"Common columns found: {common_columns}")
+                print(f"找到公共列: {common_columns}")
             else:
-                print("No common columns found between the Excel files.")
+                print("Excel文件之间没有找到公共列。")
                 return
             
-            # Perform the merge
+            # 执行合并
             result_path = merger.merge_multiple_files(
                 args.output, 
                 merge_type=args.merge_type, 
                 matching_column=args.column
             )
         else:
-            # Handle two file merging with optional formatting
-            print(f"Merging Excel files: {args.file1} and {args.file2}")
+            # 处理两个文件合并（可选格式化）
+            print(f"正在合并Excel文件: {args.file1} 和 {args.file2}")
             
-            # Load the Excel files
+            # 加载Excel文件
             merger.load_excel_files(args.file1, args.file2)
             
-            # Show matching columns
+            # 显示匹配的列
             matching_columns = merger.find_matching_columns()
             if matching_columns:
-                print(f"Matching columns found: {matching_columns}")
+                print(f"找到匹配的列: {matching_columns}")
             else:
-                print("No matching columns found between the two Excel files.")
+                print("两个Excel文件之间没有找到匹配的列。")
                 return
             
-            # Parse formatting options if provided
+            # 解析格式化选项（如果提供）
             formatting_options = None
             if args.formatting:
                 import json
                 try:
                     formatting_options = json.loads(args.formatting)
                 except json.JSONDecodeError as e:
-                    print(f"Error parsing formatting options: {e}")
+                    print(f"解析格式化选项时出错: {e}")
                     return
             
-            # Perform the merge with or without formatting
+            # 执行合并（带或不带格式化）
             if formatting_options:
                 result_path = merger.merge_with_formatting(
                     args.file1, args.file2, args.output,
@@ -1382,12 +1382,12 @@ def main() -> None:
                     matching_column=args.column
                 )
         
-        print(f"Successfully merged the Excel files! Output: {result_path}")
+        print(f"Excel文件合并成功！输出: {result_path}")
         
     except (FileNotFoundError, PermissionError, ValueError) as e:
-        print(f"Validation error: {e}")
+        print(f"验证错误: {e}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"发生意外错误: {e}")
 
 
 if __name__ == "__main__":
